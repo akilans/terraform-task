@@ -22,52 +22,6 @@ data "aws_availability_zones" "aws_zones" {
   state = "available"
 }
 
-# create launch template
-resource "aws_launch_template" "my-lt" {
-  name                   = "my-lt-${var.env}"
-  image_id               = data.aws_ami.ubuntu.id
-  instance_type          = var.instance_type
-  key_name               = "akilans.cloud"
-  vpc_security_group_ids = [aws_security_group.allow_ssh_http.id]
-  tag_specifications {
-    resource_type = "instance"
-
-    tags = {
-      Name = "apache-server"
-      env  = var.env
-    }
-  }
-
-  user_data = base64encode(file("${path.module}/install-server.sh"))
-
-  tags = {
-    "env" = var.env
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
-
-}
-
-# data to fetch all the sg
-data "aws_subnets" "subnets" {
-
-  filter {
-    name   = "vpc-id"
-    values = [var.vpc_id]
-  }
-
-
-  filter {
-    name   = "vpc-id"
-    values = [var.vpc_id]
-  }
-}
-
-
-
-
 # security group to allow HTTP from ALB
 resource "aws_security_group" "allow_http_alb" {
   name        = "alb_http_sg"
@@ -136,6 +90,36 @@ resource "aws_security_group" "allow_ssh_http" {
     env  = var.env
   }
 }
+
+
+# create launch template
+resource "aws_launch_template" "my-lt" {
+  name                   = "my-lt-${var.env}"
+  image_id               = data.aws_ami.ubuntu.id
+  instance_type          = var.instance_type
+  key_name               = "akilans.cloud"
+  vpc_security_group_ids = [aws_security_group.allow_ssh_http.id]
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = {
+      Name = "apache-server"
+      env  = var.env
+    }
+  }
+
+  user_data = base64encode(file("${path.module}/install-server.sh"))
+
+  tags = {
+    "env" = var.env
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+}
+
 
 # create ALB
 resource "aws_lb" "my-alb" {

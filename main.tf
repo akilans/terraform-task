@@ -1,16 +1,26 @@
 # This module creates
 # 
 module "vpc_module" {
-  source = "./modules/networking"
+  source         = "./modules/networking"
+  region         = var.region
+  env            = var.env
+  subnets        = var.subnets
+  vpc_name       = var.vpc_name
+  vpc_cidr_range = var.vpc_cidr_range
 }
 
 # This module creates
 # 
 
 module "asg_module" {
-  source      = "./modules/autoscaling"
-  vpc_id      = module.vpc_module.vpc_id
-  subnets_ids = module.vpc_module.subnets
+  source        = "./modules/autoscaling"
+  env           = var.env
+  vpc_id        = module.vpc_module.vpc_id
+  instance_type = var.instance_type
+  desired_count = var.desired_count
+  minimum_count = var.minimum_count
+  maximum_count = var.maximum_count
+  subnets_ids   = module.vpc_module.subnets
 }
 
 

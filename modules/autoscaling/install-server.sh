@@ -2,7 +2,7 @@
 apt update
 apt install ansible -y
 
-cat << 'EOF' > /home/ubuntu/playbook.yml
+cat << 'EOF' > /playbook.yml
 ---
 - name: Install apache sever and change default port
   hosts: localhost
@@ -27,7 +27,7 @@ cat << 'EOF' > /home/ubuntu/playbook.yml
         state: restarted
 EOF
 
-ansible-playbook /home/ubuntu/playbook.yml
+ansible-playbook /playbook.yml
 
 #apt install apache2 -y
 #echo "Hello from - $(hostname)" > /var/www/html/index.html
