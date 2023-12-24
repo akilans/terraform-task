@@ -43,3 +43,8 @@ variable "maximum_count" {
   default     = 4
 }
 
+# subnet ids list
+variable "subnets_ids" {
+  description = "List of subnet ids"
+  type        = list(string)
+}

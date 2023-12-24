@@ -24,12 +24,21 @@ data "aws_availability_zones" "aws_zones" {
 
 # create launch template
 resource "aws_launch_template" "my-lt" {
-  name          = "my-lt-${var.env}"
-  image_id      = data.aws_ami.ubuntu.id
-  instance_type = var.instance_type
-  key_name      = "akilans.cloud"
+  name                   = "my-lt-${var.env}"
+  image_id               = data.aws_ami.ubuntu.id
+  instance_type          = var.instance_type
+  key_name               = "akilans.cloud"
+  vpc_security_group_ids = [aws_security_group.allow_ssh_http.id]
+  tag_specifications {
+    resource_type = "instance"
 
-  user_data = file("${path.module}/install-server.sh")
+    tags = {
+      Name = "apache-server"
+      env  = var.env
+    }
+  }
+
+  user_data = base64encode(file("${path.module}/install-server.sh"))
 
   tags = {
     "env" = var.env
@@ -43,11 +52,20 @@ resource "aws_launch_template" "my-lt" {
 
 # data to fetch all the sg
 data "aws_subnets" "subnets" {
+
+  filter {
+    name   = "vpc-id"
+    values = [var.vpc_id]
+  }
+
+
   filter {
     name   = "vpc-id"
     values = [var.vpc_id]
   }
 }
+
+
 
 
 # security group to allow HTTP from ALB
@@ -79,11 +97,51 @@ resource "aws_security_group" "allow_http_alb" {
   }
 }
 
+# security group to allow SSH access
+resource "aws_security_group" "allow_ssh_http" {
+  name        = "allow_ssh_http_sg"
+  description = "Allow SSH inbound traffic"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description = "SSH from anywhere"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+
+  }
+
+  ingress {
+    description     = "Allow HTTP from alb sg"
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.allow_http_alb.id]
+
+  }
+
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+
+  tags = {
+    Name = "allow_ssh_http_sg"
+    env  = var.env
+  }
+}
+
 # create ALB
 resource "aws_lb" "my-alb" {
   name            = "my-alb"
   security_groups = [aws_security_group.allow_http_alb.id]
-  subnets         = data.aws_subnets.subnets.ids
+  subnets         = var.subnets_ids
 
   tags = {
     env = var.env
@@ -93,18 +151,19 @@ resource "aws_lb" "my-alb" {
 # create target group
 resource "aws_lb_target_group" "my-tg" {
   name     = "my-tg"
-  port     = 80
+  port     = 8080
   protocol = "HTTP"
   vpc_id   = var.vpc_id
 }
 
 # create auto scaling group
 resource "aws_autoscaling_group" "my-asg" {
-  availability_zones = data.aws_availability_zones.aws_zones.zone_ids
-  desired_capacity   = var.desired_count
-  max_size           = var.maximum_count
-  min_size           = var.minimum_count
-  target_group_arns  = [aws_lb_target_group.my-tg.arn]
+  #availability_zones  = [data.aws_availability_zones.aws_zones.names[0], data.aws_availability_zones.aws_zones.names[1]]
+  desired_capacity    = var.desired_count
+  max_size            = var.maximum_count
+  min_size            = var.minimum_count
+  target_group_arns   = [aws_lb_target_group.my-tg.arn]
+  vpc_zone_identifier = var.subnets_ids
 
 
   launch_template {

@@ -8,3 +8,10 @@ variable "subnets" {
     my-subnet3 = "10.0.3.0/24"
   }
 }
+
+# env
+variable "env" {
+  description = "Environment name"
+  type        = string
+  default     = "dev"
+}
